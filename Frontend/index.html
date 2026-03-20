@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Roamly — AI Travel Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink:       #0e0e0e;
+      --ink-soft:  #3a3a3a;
+      --ink-dim:   #8a8a8a;
+      --ink-ghost: #c4c4c4;
+      --paper:     #faf9f6;
+      --paper-2:   #f3f1ec;
+      --paper-3:   #ede9e1;
+      --gold:      #b8922a;
+      --gold-pale: #f5edd8;
+      --gold-deep: #8a6a1a;
+      --user-bg:   #0e0e0e;
+      --user-fg:   #faf9f6;
+      --border:    rgba(14,14,14,0.1);
+      --border-md: rgba(14,14,14,0.15);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper-2);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Subtle linen texture */
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(184,146,42,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(184,146,42,0.04) 0%, transparent 50%);
+    }
+
+    /* ── APP SHELL ─────────────────────────── */
+    .app {
+      width: 100%;
+      max-width: 800px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--paper);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative top border */
+    .app::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold) 30%,
+        var(--gold) 70%,
+        transparent 100%
+      );
+      z-index: 10;
+    }
+
+    /* ── HEADER ──────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 2rem;
+      background: var(--ink);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle map grid lines in header */
+    .header::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      background: rgba(184,146,42,0.12);
+      border: 1px solid rgba(184,146,42,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-mark svg {
+      width: 38px;
+      height: 38px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem;
+      font-weight: 500;
+      color: #faf9f6;
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+
+    .brand-tag {
+      font-size: 0.62rem;
+      color: rgba(250,249,246,0.4);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.3rem 0.8rem;
+      border: 1px solid rgba(184,146,42,0.35);
+      border-radius: 2px;
+      background: rgba(184,146,42,0.08);
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 6px rgba(74,222,128,0.7);
+      animation: livepulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(74,222,128,0.7); }
+      50% { opacity: 0.5; box-shadow: 0 0 2px rgba(74,222,128,0.3); }
+    }
+
+    .live-text {
+      font-size: 0.62rem;
+      color: rgba(250,249,246,0.55);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    /* ── CHAT AREA ───────────────────────── */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      scroll-behavior: smooth;
+      background: var(--paper);
+    }
+
+    .chat::-webkit-scrollbar { width: 4px; }
+    .chat::-webkit-scrollbar-track { background: transparent; }
+    .chat::-webkit-scrollbar-thumb {
+      background: var(--paper-3);
+      border-radius: 2px;
+    }
+
+    /* ── EMPTY STATE ─────────────────────── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 2rem 2rem 3rem;
+      text-align: center;
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-emblem {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--gold-pale);
+      border: 1px solid rgba(184,146,42,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-emblem svg {
+      width: 72px;
+      height: 72px;
+    }
+
+    .empty-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .empty-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+      line-height: 1.1;
+    }
+
+    .empty-heading em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .empty-sub {
+      font-size: 0.85rem;
+      color: var(--ink-dim);
+      line-height: 1.7;
+      max-width: 340px;
+      font-weight: 300;
+    }
+
+    /* Divider */
+    .empty-divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .empty-divider::before,
+    .empty-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .empty-divider span {
+      font-size: 0.65rem;
+      color: var(--ink-ghost);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* Suggestion chips */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      max-width: 480px;
+    }
+
+    .chip {
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--border-md);
+      border-radius: 2px;
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      cursor: pointer;
+      background: var(--paper);
+      transition: all 0.18s ease;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold-pale);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.2s ease;
+    }
+
+    .chip:hover::before { transform: scaleX(1); }
+
+    .chip:hover {
+      border-color: var(--gold);
+      color: var(--gold-deep);
+    }
+
+    .chip span { position: relative; z-index: 1; }
+
+    /* ── MESSAGES ────────────────────────── */
+    .row {
+      display: flex;
+      animation: msgIn 0.25s ease forwards;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .row.user { justify-content: flex-end; }
+    .row.bot  { justify-content: flex-start; }
+
+    .bubble {
+      max-width: 74%;
+      padding: 1rem 1.2rem;
+      font-size: 0.9rem;
+      line-height: 1.8;
+      word-wrap: break-word;
+    }
+
+    /* Bot bubble */
+    .bot .bubble {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 2px 12px 12px 12px;
+      color: var(--ink);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    /* Gold left accent on bot messages */
+    .bot .bubble::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: 16px;
+      bottom: 16px;
+      width: 2px;
+      background: var(--gold);
+      border-radius: 0 1px 1px 0;
+    }
+
+    /* User bubble */
+    .user .bubble {
+      background: var(--ink);
+      border-radius: 12px 2px 12px 12px;
+      color: var(--user-fg);
+      font-weight: 300;
+    }
+
+    /* Markdown inside bot bubbles */
+    .bubble p { margin: 0.35rem 0; }
+    .bubble p:first-child { margin-top: 0; }
+    .bubble p:last-child  { margin-bottom: 0; }
+    .bubble h1, .bubble h2, .bubble h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 0.8rem 0 0.3rem;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+    .bubble ul, .bubble ol { padding-left: 1.3rem; margin: 0.4rem 0; }
+    .bubble li { margin-bottom: 0.25rem; }
+    .bubble strong { font-weight: 500; color: var(--ink); }
+    .bubble code {
+      background: var(--gold-pale);
+      color: var(--gold-deep);
+      padding: 1px 6px;
+      border-radius: 2px;
+      font-size: 0.82rem;
+      font-family: 'SF Mono', monospace;
+    }
+    .bubble pre {
+      background: var(--paper-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.9rem 1rem;
+      overflow-x: auto;
+      margin: 0.6rem 0;
+    }
+    .bubble pre code { background: none; padding: 0; }
+    .bubble a { color: var(--gold); text-decoration: underline; }
+    .bubble blockquote {
+      border-left: 2px solid var(--gold);
+      padding-left: 0.9rem;
+      color: var(--ink-soft);
+      font-style: italic;
+      margin: 0.5rem 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.98rem;
+    }
+
+    /* Sender label */
+    .label {
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+      margin-bottom: 0.35rem;
+      padding: 0 0.2rem;
+      font-weight: 400;
+    }
+
+    .row.user .label { text-align: right; }
+
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      max-width: 74%;
+    }
+
+    .row.user .msg-group { align-items: flex-end; }
+    .row.bot  .msg-group { align-items: flex-start; }
+
+    /* ── TYPING INDICATOR ────────────────── */
+    .typing-row {
+      display: flex;
+      animation: msgIn 0.2s ease forwards;
+    }
+
+    .typing-bubble {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 2px 12px 12px 12px;
+      padding: 0.9rem 1.2rem;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .typing-bubble::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: 12px;
+      bottom: 12px;
+      width: 2px;
+      background: var(--gold);
+      border-radius: 0 1px 1px 0;
+      opacity: 0.5;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ink-ghost);
+      animation: dotblink 1.5s ease-in-out infinite;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotblink {
+      0%, 80%, 100% { transform: scale(1); opacity: 0.3; }
+      40% { transform: scale(1.4); opacity: 1; background: var(--gold); }
+    }
+
+    /* ── FOOTER ──────────────────────────── */
+    .footer {
+      padding: 1.1rem 2rem 1.5rem;
+      background: var(--paper);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--paper-2);
+      border: 1px solid var(--border-md);
+      border-radius: 4px;
+      padding: 0.5rem 0.5rem 0.5rem 1.1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-row:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(184,146,42,0.1);
+      background: var(--paper);
+    }
+
+    .footer input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 0.88rem;
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+    }
+
+    .footer input::placeholder {
+      color: var(--ink-ghost);
+      font-style: italic;
+    }
+
+    .send-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 3px;
+      border: none;
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.12s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .send-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      transform: scaleY(0);
+      transform-origin: bottom;
+      transition: transform 0.2s ease;
+    }
+
+    .send-btn:hover::before { transform: scaleY(1); }
+    .send-btn:hover { transform: translateY(-1px); }
+    .send-btn:active { transform: translateY(0) scale(0.96); }
+
+    .send-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-top: 0.6rem;
+    }
+
+    .footer-meta span {
+      font-size: 0.65rem;
+      color: var(--ink-ghost);
+      letter-spacing: 0.06em;
+    }
+
+    .footer-meta .sep {
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: var(--ink-ghost);
+    }
+
+    /* ── RESPONSIVE ──────────────────────── */
+    @media (max-width: 640px) {
+      .app { max-width: 100%; box-shadow: none; }
+      .header, .chat, .footer { padding-left: 1.2rem; padding-right: 1.2rem; }
+      .bubble, .msg-group { max-width: 90%; }
+      .empty-heading { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">
+        <i data-lucide="compass" style="width:22px;height:22px;stroke:#b8922a;stroke-width:1.5;"></i>
+      </div>
+      <div class="brand">
+        <span class="brand-name">Roamly</span>
+        <span class="brand-tag">AI Travel Concierge</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span class="live-text">Available 24 / 7</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat" class="chat">
+    <div class="empty-state" id="emptyState">
+
+      <div class="empty-emblem">
+        <i data-lucide="globe" style="width:52px;height:52px;stroke:#b8922a;stroke-width:1;opacity:0.7;"></i>
+      </div>
+
+      <div class="empty-copy">
+        <div class="empty-heading">Where do you want<br>to go <em>next?</em></div>
+        <p class="empty-sub">Ask about destinations, packages, visa requirements, pricing, or anything about your journey with Roamly.</p>
+      </div>
+
+      <div class="empty-divider">
+        <span>Quick questions</span>
+      </div>
+
+      <div class="suggestions">
+        <div class="chip" onclick="quickAsk(this)"><span>Bali package details</span></div>
+        <div class="chip" onclick="quickAsk(this)"><span>Dubai visa process</span></div>
+        <div class="chip" onclick="quickAsk(this)"><span>Cancellation policy</span></div>
+        <div class="chip" onclick="quickAsk(this)"><span>Honeymoon packages</span></div>
+        <div class="chip" onclick="quickAsk(this)"><span>Europe trip cost</span></div>
+        <div class="chip" onclick="quickAsk(this)"><span>Kerala package</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="input-row">
+      <input id="input" placeholder="Ask anything about your trip..." autocomplete="off" />
+      <button class="send-btn" onclick="send()" title="Send">
+        <svg viewBox="0 0 24 24">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="footer-meta">
+      <span>Press Enter to send</span>
+      <div class="sep"></div>
+      <span>Powered by Amazon Bedrock</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  const chat   = document.getElementById("chat");
+  const input  = document.getElementById("input");
+  const emptyEl = document.getElementById("emptyState");
+  let history  = [];
+
+  // Replace with your actual API Gateway URL
+  const API_URL = "https://1paazx31be.execute-api.us-east-1.amazonaws.com/dev/chat";
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  function quickAsk(el) {
+    input.value = el.querySelector("span").textContent;
+    send();
+  }
+
+  function removeEmpty() {
+    if (emptyEl && emptyEl.parentNode) emptyEl.remove();
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function add(text, sender) {
+    removeEmpty();
+
+    const row = document.createElement("div");
+    row.className = `row ${sender}`;
+
+    const group = document.createElement("div");
+    group.className = "msg-group";
+
+    const lbl = document.createElement("div");
+    lbl.className = "label";
+    lbl.textContent = sender === "bot" ? "Roamly" : "You";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    if (sender === "bot") {
+      bubble.innerHTML = marked.parse(text);
+    } else {
+      bubble.innerHTML = escapeHtml(text);
+    }
+
+    group.appendChild(lbl);
+    group.appendChild(bubble);
+    row.appendChild(group);
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function showTyping() {
+    removeTyping();
+    const row = document.createElement("div");
+    row.className = "typing-row";
+    row.id = "typingRow";
+    row.innerHTML = `
+      <div class="typing-bubble">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>`;
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById("typingRow");
+    if (t) t.remove();
+  }
+
+  async function send() {
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    add(msg, "user");
+    input.value = "";
+    showTyping();
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, history })
+      });
+      const data = await res.json();
+      removeTyping();
+      add(data.response, "bot");
+      history.push({ user: msg, assistant: data.response });
+    } catch {
+      removeTyping();
+      add("Something went wrong. Please try again or contact us on WhatsApp at +91-98765-43210.", "bot");
+    }
+  }
+</script>
+</body>
+</html>
